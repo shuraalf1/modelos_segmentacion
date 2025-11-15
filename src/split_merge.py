@@ -50,7 +50,7 @@ def split_and_merge(image, threshold):
 
 def main():
     # --- Configuración ---
-    image_filename = 'calabaza.jpeg'
+    image_filename = 'bocho.jpeg'
     
     # Construir la ruta a la imagen de forma robusta
     script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -71,7 +71,7 @@ def main():
         return
 
     # Set the homogeneity threshold
-    threshold = 15  # Adjust this value as needed
+    threshold = 10  # Adjust this value as needed
 
     # Segment the image
     segmented_result = split_and_merge(image, threshold)
@@ -96,6 +96,7 @@ def main():
 
 
     # Display the original and segmented images
+    cv2.namedWindow('Ventana con Scroll', cv2.WINDOW_NORMAL)
     cv2.imshow('Original Image', image)
     cv2.imshow('Segmented Regions with Transparency', output)
     cv2.waitKey(0)
