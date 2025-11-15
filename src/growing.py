@@ -69,7 +69,7 @@ def main():
     Función principal para cargar una imagen, ejecutar la segmentación y mostrar los resultados.
     """
     # --- Configuración ---
-    image_filename = 'coche08.jpg'
+    image_filename = 'Cars11.png'
     
     # Construir la ruta a la imagen de forma robusta, relativa a la ubicación del script
     script_dir = os.path.dirname(os.path.abspath(__file__))  # Directorio del script (src)
@@ -78,7 +78,7 @@ def main():
     
     # Punto de semilla (y, x) - ¡Ajusta estas coordenadas para tu imagen!
     # Estas coordenadas se han elegido para 'coche08.jpg' para que caigan sobre el coche.
-    seed_point = (200, 350)  
+    seed_point = (210, 130)  
     
     # Umbral de similitud (0-255). Un valor más alto creará una región más grande.
     threshold = 40

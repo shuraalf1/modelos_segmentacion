@@ -1,77 +1,56 @@
-
 import cv2
 import numpy as np
 import os
+def is_homogeneous(region, threshold):
+    """Checks if the region is homogeneous based on the intensity threshold."""
+    min_val, max_val = np.min(region), np.max(region)
+    return (max_val - min_val) <= threshold
 
-# Predicado de homogeneidad: desviación estándar por debajo de un umbral
-def is_homogeneous(region, std_dev_threshold):
-    """
-    Comprueba si una región es homogénea basándose en la desviación estándar de sus píxeles.
-    """
-    if region.size == 0:
-        return True
-    std_dev = np.std(region)
-    return std_dev < std_dev_threshold
+def split_and_merge(image, threshold):
+    """Segments the image by recursively splitting and merging regions."""
 
-def split_and_merge(image, std_dev_threshold, min_region_size=4):
-    """
-    Realiza la segmentación de la imagen y devuelve tanto el resultado del split como del merge.
-    """
-    height, width = image.shape
-    
-    segmented_image = np.zeros_like(image, dtype=np.int32)
-    current_label = 1
-    regions_to_process = [(0, 0, height, width)]
-    processed_regions = []
+    def recursive_split(region):
+        rows, cols = region.shape
+        if rows <= 1 or cols <= 1:
+            return np.zeros_like(region, dtype=np.uint8)
 
-    # --- Fase de División (Split) ---
-    while regions_to_process:
-        y, x, h, w = regions_to_process.pop()
-        region = image[y:y+h, x:x+w]
+        if is_homogeneous(region, threshold):
+            # If homogeneous, return a region filled with the mean intensity
+            return np.full_like(region, int(np.mean(region)), dtype=np.uint8)
 
-        if is_homogeneous(region, std_dev_threshold) or h <= min_region_size or w <= min_region_size:
-            segmented_image[y:y+h, x:x+w] = current_label
-            processed_regions.append((y, x, h, w, current_label))
-            current_label += 1
-        else:
-            half_h, half_w = h // 2, w // 2
-            if half_h > 0 and half_w > 0:
-                regions_to_process.append((y, x, half_h, half_w))
-                regions_to_process.append((y, x + half_w, half_h, w - half_w))
-                regions_to_process.append((y + half_h, x, h - half_h, half_w))
-                regions_to_process.append((y + half_h, x + half_w, h - half_h, w - half_w))
-            else:
-                segmented_image[y:y+h, x:x+w] = current_label
-                processed_regions.append((y, x, h, w, current_label))
-                current_label += 1
+        # Split the region into four quadrants
+        mid_row, mid_col = rows // 2, cols // 2
 
-    # --- Visualización de la fase de Split ---
-    # Normalizar las etiquetas para que se puedan visualizar como una imagen en escala de grises
-    split_image_visual = np.zeros_like(image, dtype=np.uint8)
-    if current_label > 1:
-        # Se normalizan las etiquetas a un rango visible (0-255)
-        split_image_visual = cv2.normalize(segmented_image, None, 0, 255, cv2.NORM_MINMAX, dtype=cv2.CV_8U)
+        top_left = region[:mid_row, :mid_col]
+        top_right = region[:mid_row, mid_col:]
+        bottom_left = region[mid_row:, :mid_col]
+        bottom_right = region[mid_row:, mid_col:]
 
-    # --- Fase de Unión (Merge) con Colores ---
-    # Se crea una imagen en color para visualizar las regiones del merge
-    colored_merged_image = np.zeros((height, width, 3), dtype=np.uint8)
-    
-    # Generar un color aleatorio para cada etiqueta de región
-    labels = np.unique(segmented_image)
-    colors = {label: np.random.randint(0, 255, 3).tolist() for label in labels if label != 0}
+        # Recursively split each quadrant
+        split_top_left = recursive_split(top_left)
+        split_top_right = recursive_split(top_right)
+        split_bottom_left = recursive_split(bottom_left)
+        split_bottom_right = recursive_split(bottom_right)
 
-    # Colorear cada región en la imagen de merge
-    for label, color in colors.items():
-        colored_merged_image[segmented_image == label] = color
+        # Combine the results
+        top_half = np.hstack([split_top_left, split_top_right])
+        bottom_half = np.hstack([split_bottom_left, split_bottom_right])
+        return np.vstack([top_half, bottom_half])
 
-    return split_image_visual, colored_merged_image
+    # Ensure the image is grayscale
+    if len(image.shape) == 3:
+        gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    else:
+        gray_image = image
+
+    # Apply the split and merge algorithm
+    segmented_image = recursive_split(gray_image)
+
+    return segmented_image
 
 def main():
-    """
-    Función principal para cargar la imagen, ejecutar el algoritmo y mostrar los resultados.
-    """
     # --- Configuración ---
-    image_filename = 'coche16.jpeg'
+    image_filename = 'calabaza.jpeg'
     
     # Construir la ruta a la imagen de forma robusta
     script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -81,44 +60,49 @@ def main():
     print(f"Cargando imagen desde: {image_path}")
     
     # Cargar la imagen original en color
-    image_color = cv2.imread(image_path)
+    image = cv2.imread(image_path)
 
-    if image_color is None:
-        print(f"Error: No se pudo cargar la imagen en la ruta: {image_path}")
-        print("Asegúrate de que el archivo existe y la ruta es correcta.")
+    if image is None:
+        print(f"Error: Could not load image from {file_path}")
         return
 
-    # Convertir a escala de grises para el algoritmo de segmentación
-    image_gray = cv2.cvtColor(image_color, cv2.COLOR_BGR2GRAY)
+    if image is None:
+        print("Error: Image could not be loaded from local path or URL.")
+        return
 
-    # --- Parámetros del Algoritmo ---
-    std_dev_threshold = 35
-    min_region_size = 25
+    # Set the homogeneity threshold
+    threshold = 15  # Adjust this value as needed
 
-    print("Procesando la imagen con el método Split and Merge...")
-    
-    # Aplicar el algoritmo a la imagen en escala de grises
-    split_result, merged_result = split_and_merge(image_gray, std_dev_threshold, min_region_size)
+    # Segment the image
+    segmented_result = split_and_merge(image, threshold)
 
-    print("Proceso completado.")
+    # Create a visual representation of the segmentation
+    # Find contours of the segmented regions
+    contours, _ = cv2.findContours(segmented_result, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
-    # --- Superponer las regiones de colores sobre la imagen original ---
-    # Se define el peso de la imagen original y de la máscara de color
-    alpha = 0.6  # Peso de la imagen original
-    beta = 0.4   # Peso de la máscara de segmentación
-    gamma = 0    # Valor escalar añadido
+    # Create a copy of the original image to draw on
+    overlay = image.copy()
+    output = image.copy()
 
-    # Se crea la superposición
-    overlay_result = cv2.addWeighted(image_color, alpha, merged_result, beta, gamma)
+    # Generate random colors for each region
+    for i, contour in enumerate(contours):
+        color = np.random.randint(0, 255, size=3).tolist()
+        # Draw the filled contour on the overlay
+        cv2.drawContours(overlay, [contour], -1, color, -1)
 
-    # Mostrar resultados
-    cv2.imshow('Imagen Original', image_color)
-    cv2.imshow('Resultado del Split (Regiones)', split_result)
-    cv2.imshow(f'Resultado Superpuesto (Umbral={std_dev_threshold})', overlay_result)
+    # Blend the overlay with the original image
+    alpha = 0.6  # Transparency factor
+    cv2.addWeighted(overlay, alpha, output, 1 - alpha, 0, output)
 
-    print("Presiona cualquier tecla en una de las ventanas de imagen para cerrar.")
+
+    # Display the original and segmented images
+    cv2.imshow('Original Image', image)
+    cv2.imshow('Segmented Regions with Transparency', output)
     cv2.waitKey(0)
     cv2.destroyAllWindows()
 
-if __name__ == '__main__':
+    # Save the result
+    cv2.imwrite('segmented_image_with_overlay.png', output)
+
+if __name__ == "__main__":
     main()
