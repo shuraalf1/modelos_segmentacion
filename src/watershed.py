@@ -72,8 +72,11 @@ def main():
     """
     Función principal para cargar una imagen, ejecutar la segmentación y mostrar los resultados.
     """
+    
     # --- Configuración ---
-    image_filename = 'Cars11.png'
+    name ='Cars39'
+    typeImg = '.png'
+    image_filename = name + typeImg
     
     # Construir la ruta a la imagen de forma robusta
     script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -87,24 +90,23 @@ def main():
         return
 
     # Ejecutar el algoritmo Watershed
-    markers_image, segmented_image = watershed_segmentation(image)
+    segmented_image, markers_image = watershed_segmentation(image)
 
     # Mostrar las imágenes
     cv2.imshow('Imagen Original', image)
     cv2.imshow('Marcadores para Watershed', markers_image)
     cv2.imshow('Resultado de Watershed', segmented_image)
+     # Guardar los resultados
+    output_dir = os.path.join(project_root, 'output')
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+    cv2.imwrite(os.path.join(output_dir, f"{name}_watershed_marcadores.png"), markers_image)
+    cv2.imwrite(os.path.join(output_dir, f'{name}_watershed_region_segmentada.png'), segmented_image)
 
     print("Mostrando resultados. Presiona cualquier tecla para cerrar.")
     cv2.waitKey(0)
     cv2.destroyAllWindows()
 
-    # Guardar los resultados
-    output_dir = os.path.join(project_root, 'output')
-    if not os.path.exists(output_dir):
-        os.makedirs(output_dir)
-    cv2.imwrite(os.path.join(output_dir, 'result_watershed.png'), markers_image)
-    cv2.imwrite(os.path.join(output_dir, 'watershed_result.png'), segmented_image)
-    print(f"Resultados guardados en la carpeta: {output_dir}")
-
+   
 if __name__ == "__main__":
     main()
