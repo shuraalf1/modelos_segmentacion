@@ -222,7 +222,7 @@ def main():
     Función principal para cargar una imagen, ejecutar la segmentación y mostrar los resultados.
     """
     # --- Configuración ---
-    name ='Cars39'
+    name ='Cars11'
     typeImg = '.png'
     image_filename = name + typeImg
     

@@ -74,7 +74,7 @@ def main():
     """
     
     # --- Configuración ---
-    name ='Cars39'
+    name ='Cars11'
     typeImg = '.png'
     image_filename = name + typeImg
     
