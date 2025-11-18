@@ -1,6 +1,6 @@
 # Modelos de Segmentación de Imágenes
 
-Este proyecto contiene implementaciones de dos algoritmos clásicos de segmentación de imágenes: Crecimiento de Regiones (Region Growing) y División y Fusión (Split and Merge).
+Este proyecto contiene implementaciones de algoritmos de segmentación de imágenes, incluyendo Crecimiento de Regiones con detección de semillas, Watershed, y un script para evaluar los resultados contra un ground truth.
 
 ## Requisitos
 
@@ -30,37 +30,56 @@ Este proyecto contiene implementaciones de dos algoritmos clásicos de segmentac
 
 ## Ejecución de los Modelos
 
-Los scripts se ejecutan directamente desde la línea de comandos. Las imágenes de entrada y los parámetros se configuran dentro de cada archivo de script.
+Los scripts se ejecutan directamente desde la línea de comandos. Las imágenes de entrada y los parámetros se configuran dentro de cada archivo de script en la carpeta `src/`.
 
-### 1. Crecimiento de Regiones (`growing.py`)
+### 1. Crecimiento de Regiones con Detección de Semilla (`growing-seed-filtro.py`)
 
-Este algoritmo segmenta una región de una imagen a partir de un punto "semilla" inicial.
+Este algoritmo segmenta una región de una imagen a partir de un punto "semilla". El script primero intenta detectar una matrícula de coche (un rectángulo) y usa su centro como semilla. Si no detecta ninguna, usa una semilla por defecto.
 
 **Para ejecutar:**
 
 ```bash
-python src/growing.py
+python src/growing-seed-filtro.py
 ```
 
-**Configuración dentro de `src/growing.py`:**
+**Configuración dentro de `src/growing-seed-filtro.py`:**
 
 -   `image_filename`: Cambia el nombre del archivo de la imagen que se encuentra en la carpeta `images/`.
--   `seed_point`: Modifica la tupla `(y, x)` para elegir un punto de inicio diferente para el crecimiento.
+-   `seed_point`: Coordenadas `(y, x)` de la semilla por defecto si no se detecta ningún rectángulo.
 -   `threshold`: Ajusta el valor para controlar cuán similar debe ser un píxel vecino para ser incluido en la región. Un valor más alto permite que la región crezca más.
 
-### 2. División y Fusión (`split_merge.py`)
+### 2. Segmentación con Watershed (`watershed.py`)
 
-Este algoritmo divide recursivamente la imagen en cuadrantes y luego los fusiona si son homogéneos, basándose en un umbral.
+Este script utiliza el algoritmo Watershed de OpenCV para segmentar una imagen, separando los objetos del fondo.
 
 **Para ejecutar:**
 
 ```bash
-python src/split_merge.py
+python src/watershed.py
 ```
 
-**Configuración dentro de `src/split_merge.py`:**
+**Configuración dentro de `src/watershed.py`:**
 
--   `image_filename`: Cambia el nombre del archivo de la imagen que se encuentra en la carpeta `images/`.
--   `threshold`: Ajusta el umbral de homogeneidad. Un valor más bajo resultará en más divisiones y una segmentación más detallada.
+-   `image_filename`: Cambia el nombre del archivo de la imagen en la carpeta `images/`.
+-   El umbral para la transformada de distancia (`0.2 * dist_transform.max()`) es un parámetro clave. Reducir el multiplicador (e.g., a `0.1`) puede ayudar a detectar más regiones o más pequeñas.
 
-El resultado de la segmentación se guardará como `segmented_image_with_overlay.png` en el directorio raíz del proyecto.
+### 3. Evaluación de Segmentación (`segmentadores-vs-groundthru.py`)
+
+Este script compara una máscara de segmentación generada (la predicción) con una máscara de ground truth para evaluar su rendimiento. Calcula métricas como IoU, Dice, Precisión y Recall.
+
+**Para ejecutar:**
+
+```bash
+python src/segmentadores-vs-groundthru.py
+```
+
+**Configuración dentro de `src/segmentadores-vs-groundthru.py`:**
+
+-   `ruta_predicha`: Ruta a la imagen de la máscara de segmentación que quieres evaluar.
+-   `ruta_ground_truth`: Ruta a la imagen de la máscara de ground truth.
+
+El script muestra una comparación visual y guarda un resumen de las métricas en `resultados_evaluacion.txt`.
+
+## Salidas
+
+Los scripts guardan las imágenes resultantes (imágenes con rectángulos detectados, regiones segmentadas, etc.) en la carpeta `output/`.
